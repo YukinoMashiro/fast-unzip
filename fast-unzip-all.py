@@ -4,6 +4,7 @@ import subprocess
 import platform
 import json
 
+
 def read_config(file):
     try:
         with open(file, 'r', encoding='utf-8') as f:
@@ -56,11 +57,18 @@ def extract_files(folder, password_list, count):
         # 文件夹，递归处理
         if os.path.isdir(file_path):
             print(f'(loop:{count}), dir({path})')
+
+            # windows打包程序和7z程序放在这里面，无需解压
+            if file_name == "_internal":
+                continue
             extract_files(file_path, password_list, count)
 
         # 压缩文件
         elif is_compressed(file_path):
             print(f'(loop:{count}), file_path({path})')
+            # 由于部分exe文件也是压缩包，此类文件不需要解压
+            if file_path.endswith(".exe"):
+                continue
             # 以文件名前缀，创建文件夹
             new_folder_name_list = file_name.split(".", 1)
             new_folder_path = os.path.join(folder, new_folder_name_list[0])
@@ -105,6 +113,7 @@ def extract_files(folder, password_list, count):
             for file_name, reason in failed_files:
                 f.write(f'{file_name}: {reason}\n')
 
+
 exe_process = "7z"
 config_file = "config.json"
 exec_count = 1
@@ -115,7 +124,7 @@ config_key_dest_dir = "dest_dir"
 config_key_password_list = "password_list"
 
 if platform.system() == 'Windows':
-    exe_process = '7z'
+    exe_process = './_internal/7z/7z.exe'
 elif platform.system() == 'Linux':
     exe_process = '7zz'
 
