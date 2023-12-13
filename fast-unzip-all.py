@@ -2,14 +2,20 @@
 import os
 import subprocess
 import platform
+import json
 
-def read_passwords(file_path):
+def read_config(file):
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            for line in file:
-                passwords.append(line.strip())
+        with open(file, 'r', encoding='utf-8') as f:
+            datas = json.load(f)
+            return datas
     except FileNotFoundError:
-        print(f"File not found ：{file_path}")
+        print(f'Config file not found:{file}')
+    except json.JSONDecodeError:
+        print(f'Config file format error:{file}')
+    except Exception as e:
+        print(f'unknown error:{str(e)}')
+    return None
 
 
 def is_compressed(file_path):
@@ -45,15 +51,17 @@ def extract_files(folder, password_list, count):
 
     for file_name in os.listdir(folder):
         file_path = os.path.join(folder, file_name)
+        # 为了解决编码问题
+        path = file_path.encode(encoding="utf-8", errors="ignore").decode()
         # 文件夹，递归处理
         if os.path.isdir(file_path):
-            print(f'(loop:{count}), dir({file_path.encode(encoding="utf-8", errors="ignore").decode()})')
+            print(f'(loop:{count}), dir({path})')
             extract_files(file_path, password_list, count)
 
-        # 文件判断是否为压缩文件
+        # 压缩文件
         elif is_compressed(file_path):
-            print(f'(loop:{count}), file_path({file_path.encode(encoding="utf-8", errors="ignore").decode()})')
-            # 创建文件夹
+            print(f'(loop:{count}), file_path({path})')
+            # 以文件名前缀，创建文件夹
             new_folder_name_list = file_name.split(".", 1)
             new_folder_path = os.path.join(folder, new_folder_name_list[0])
             if not os.path.exists(new_folder_path):
@@ -61,16 +69,18 @@ def extract_files(folder, password_list, count):
             # 文件重命名,避免压缩文件与源文件同名时，出现系统占用
             new_file_path = file_path + '1'
             os.rename(file_path, new_file_path)
+            # 遍历预制密码尝试解压
             for password in password_list:
                 try:
                     # 开始解压
-                    subprocess.check_output([exe_process, 'x', '-p' + password, '-o' + new_folder_path, '-y', new_file_path])
+                    subprocess.check_output(
+                        [exe_process, 'x', '-p' + password, '-o' + new_folder_path, '-y', new_file_path])
+                    # 解压成功，移除源文件
                     os.remove(new_file_path)
                     break
                 except subprocess.CalledProcessError as e:
                     continue
             else:
-                print(f'(loop:{count}), file_path({file_path})')
                 # 有可能是分卷压缩，此时应该恢复原来的文件名尝试解压
                 os.rename(new_file_path, file_path)
                 for password in password_list:
@@ -82,26 +92,45 @@ def extract_files(folder, password_list, count):
                     except subprocess.CalledProcessError as e:
                         continue
                 else:
+                    # 解压失败，删除为此压缩文件创建的文件夹
+                    os.removedirs(new_folder_path)
                     failed_files.append((file_name, 'Incorrect password'))
+        # 非压缩文件，不处理
+        else:
+            continue
 
-    with open(os.path.join(folder, 'failed_files.txt'), 'w', encoding='utf-8') as f:
-        for file_name, reason in failed_files:
-            f.write(f'{file_name}: {reason}\n')
+    # 记录解压失败原因
+    if failed_files:
+        with open(os.path.join(folder, 'failed_files.txt'), 'w', encoding='utf-8') as f:
+            for file_name, reason in failed_files:
+                f.write(f'{file_name}: {reason}\n')
 
-
-passwords = []
 exe_process = "7z"
-password_file = 'passwords.txt'
+config_file = "config.json"
+exec_count = 1
 dest_dir = '.'
-
+password_list = []
+config_key_exec_count = "exec_count"
+config_key_dest_dir = "dest_dir"
+config_key_password_list = "password_list"
 
 if platform.system() == 'Windows':
     exe_process = '7z'
 elif platform.system() == 'Linux':
     exe_process = '7zz'
 
-# 调用函数进行文件读取和打印
-read_passwords(password_file)
+# 读取配置文件
+data = read_config(config_file)
+if data is not None:
+    if config_key_exec_count in data:
+        exec_count = data[config_key_exec_count]
+    if config_key_dest_dir in data:
+        dest_dir = data[config_key_dest_dir]
+    if config_key_password_list in data:
+        password_list = data[config_key_password_list]
+else:
+    print(r'use default config')
+
 # 可能涉及多重解压，默认执行4次
-for i in range(4):
-    extract_files(dest_dir, passwords, i)
+for i in range(exec_count):
+    extract_files(dest_dir, password_list, i)
