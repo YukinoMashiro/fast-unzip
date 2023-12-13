@@ -66,8 +66,8 @@ def extract_files(folder, password_list, count):
         # 压缩文件
         elif is_compressed(file_path):
             print(f'(loop:{count}), file_path({path})')
-            # 由于部分exe文件也是压缩包，此类文件不需要解压
-            if file_path.endswith(".exe"):
+            # 由于部分exe文件也是压缩包，此类文件不需要解压, 本程序也有可能是压缩包，跳过
+            if file_name.endswith(".exe") or own_file_name1 == file_name or own_file_name2 == file_name:
                 continue
             # 以文件名前缀，创建文件夹
             new_folder_name_list = file_name.split(".", 1)
@@ -122,11 +122,13 @@ password_list = []
 config_key_exec_count = "exec_count"
 config_key_dest_dir = "dest_dir"
 config_key_password_list = "password_list"
+own_file_name1 = os.path.basename(__file__)
+own_file_name2 = own_file_name1.split(".")[0]
 
 if platform.system() == 'Windows':
     exe_process = './_internal/7z/7z.exe'
 elif platform.system() == 'Linux':
-    exe_process = '7zz'
+    exe_process = './_internal/7z/7zz'
 
 # 读取配置文件
 data = read_config(config_file)
@@ -140,6 +142,6 @@ if data is not None:
 else:
     print(r'use default config')
 
-# 可能涉及多重解压，默认执行4次
+# 可能涉及多重解压，默认执行1次
 for i in range(exec_count):
     extract_files(dest_dir, password_list, i)
