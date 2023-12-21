@@ -1,5 +1,7 @@
 {
-	"exec_count": 4,
+	"exec_count": 1,
 	"dest_dir": ".",
+	"ignore_format_exe": true,
+	"access_code": "781f7c9a36bd59fc63ecac614a935d38d6274052",
 	"password_list": ["password", "密码", "パスワード"]
 }
