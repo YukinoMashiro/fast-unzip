@@ -4,6 +4,39 @@ import subprocess
 import platform
 import json
 import hashlib
+import logging
+from datetime import datetime
+
+log_file = "log.log"
+logging.basicConfig(filename=log_file,
+                    encoding='utf-8',
+                    level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
+
+
+def log2file(level, msg):
+    logging.log(level, msg)
+
+
+def log2screen(level, msg):
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f'{current_time} - {levelToName[level]} - {msg}')
+
+
+def log2both(level, msg):
+    log2file(level, msg)
+    log2screen(level, msg)
+
+
+levelToName = {
+    logging.CRITICAL: 'CRITICAL',
+    logging.ERROR: 'ERROR',
+    logging.WARNING: 'WARNING',
+    logging.INFO: 'INFO',
+    logging.DEBUG: 'DEBUG',
+    logging.NOTSET: 'NOTSET',
+}
 
 
 def sha1_hash_string(input_string):
@@ -93,7 +126,7 @@ def extract_files(folder, password_list, count):
             path = file_path.encode(encoding="utf-8", errors="ignore").decode()
             # 文件夹，递归处理
             if os.path.isdir(file_path):
-                print(f'(loop:{count}), dir({path})')
+                log2both(logging.INFO, f'(loop:{count}), dir({path})')
 
                 # windows打包程序和7z程序放在这里面，无需解压
                 if file_name == "_internal":
@@ -102,10 +135,11 @@ def extract_files(folder, password_list, count):
 
             # 压缩文件
             elif is_compressed(file_path):
-                print(f'(loop:{count}), compressed_file_path({path})')
+                log2both(logging.INFO, f'(loop:{count}), compressed_file_path({path})')
                 # 由于部分exe文件也是压缩包，此类文件不需要解压, 本程序也有可能是压缩包，跳过
                 if ((ignore_format_exe and file_name.endswith(".exe")) or own_file_name1 == file_name
-                        or own_file_name2 == file_name):
+                        or own_file_name2 == file_name or log_file == file_name):
+                    log2both(logging.INFO, f'(loop:{count}), ignore compressed_file_path({path})')
                     continue
                 # 以文件名前缀，创建文件夹
                 new_folder_name_list = file_name.split(".", 1)
@@ -146,7 +180,7 @@ def extract_files(folder, password_list, count):
             else:
                 continue
         except Exception as e:
-            print("Capture error:", e)
+            log2both(logging.ERROR, f'Capture error:{e}')
     # 记录解压失败原因
     if failed_files:
         with open(os.path.join(folder, 'failed_files.txt'), 'w', encoding='utf-8') as f:
@@ -191,16 +225,19 @@ if data is not None:
     if config_key_password_list in data:
         password_list = data[config_key_password_list]
 else:
-    print(r'use default config')
+    log2both(logging.INFO, 'use default config')
+
+log2both(logging.INFO, "Start to unzip.")
 
 get_mac_address()
 
 # 校验准入码
 if access_code == "":
-    print("No access code, please fill in the access code in the configuration file. If you do not have an access "
-          "code, please purchase it.")
+    log2both(logging.ERROR,
+             "No access code, please fill in the access code in the configuration file. If you do not have an access "
+             "code, please purchase it.")
 elif access_code not in mac_hash:
-    print("Access code error, please purchase access code.")
+    log2both(logging.ERROR, "Access code error, please purchase access code.")
 else:
     # 可能涉及多重解压，默认执行1次
     for i in range(exec_count):
