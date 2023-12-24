@@ -76,11 +76,14 @@ def read_config(file):
             datas = json.load(f)
             return datas
     except FileNotFoundError:
-        print(f'Config file not found:{file}')
+        log2both(logging.ERROR,
+                 f'Config file not found:{file}')
     except json.JSONDecodeError:
-        print(f'Config file format error:{file}')
+        log2both(logging.ERROR,
+                 f'Config file format error:{file}')
     except Exception as e:
-        print(f'unknown error:{str(e)}')
+        log2both(logging.ERROR,
+                 f'unknown error:{str(e)}')
     return None
 
 
@@ -94,24 +97,20 @@ def is_compressed(file_path):
         line = ""
         while True:
             output = process.stdout.readline()
-            if process.poll() is not None:
+            if not output:
                 break
-            if output:
-                line += output.strip().decode(errors='ignore')
+            line += output.strip().decode(errors='ignore')
         # 解压错误，说明是压缩文件
         if 'Cannot open encrypted archive. Wrong password?' in line:
-            process.communicate()
             return True
         # 类型已识别出来，是压缩文件
         elif 'Type = ' in line:
-            process.communicate()
             return True
         # 非压缩文件
         # 对于分卷压缩文件，但卷不完整，Cannot open the file as [7z] archive
         # 对非压缩文件，显示Cannot open the file as archive
         # 上面这两种情况，都认为非压缩文件
         elif 'Cannot open the file as' in line:
-            process.communicate()
             return False
     return True
 
@@ -207,7 +206,7 @@ own_file_name1 = os.path.basename(__file__)
 own_file_name2 = own_file_name1.split(".")[0]
 
 if platform.system() == 'Windows':
-    exe_process = './_internal/7z/7z.exe'
+    exe_process = './_internal//7z.exe'
 elif platform.system() == 'Linux':
     exe_process = './_internal/7z/7zz'
 
@@ -242,3 +241,5 @@ else:
     # 可能涉及多重解压，默认执行1次
     for i in range(exec_count):
         extract_files(dest_dir, password_list, i)
+log2both(logging.INFO, "End to unzip.")
+os.system('pause')
