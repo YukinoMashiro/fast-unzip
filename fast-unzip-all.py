@@ -206,7 +206,7 @@ own_file_name1 = os.path.basename(__file__)
 own_file_name2 = own_file_name1.split(".")[0]
 
 if platform.system() == 'Windows':
-    exe_process = './_internal//7z.exe'
+    exe_process = './_internal/7z/7z.exe'
 elif platform.system() == 'Linux':
     exe_process = './_internal/7z/7zz'
 
