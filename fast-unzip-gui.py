@@ -4,16 +4,23 @@ import platform
 import hashlib
 import logging
 from datetime import datetime
-import tkinter as tk
-from tkinter import filedialog
-import configparser
 import json
+if platform.system() == 'Windows':
+    import tkinter as tk
+    from tkinter import filedialog
+    import configparser
+else:
+    pass
 
 
 class CMDApp:
     def __init__(self):
+        self.config_file = "config.json"
+
         # 实例化配置类
         self.configurator = Configurator()
+        # 读取配置
+        self.load_config(self.config_file)
         # 实例化解压类
         self.extractor = FileExtractor(self.configurator)
         # 实例化日志类
@@ -294,7 +301,7 @@ class FileExtractor:
         self.exe_process = "7z"
         self.platform = platform.system()
         self.logger = Logger()
-        self.accessor = Accessor()
+        self.accessor = None
 
     def is_compressed(self, file_path):
         if os.path.isdir(file_path):
@@ -407,6 +414,7 @@ class FileExtractor:
         is_access = True
         # 当前只支持windows才作校验
         if self.platform == 'Windows':
+            self.accessor = Accessor()
             # 校验准入码
             if self.configurator.access_code == "":
                 is_access = False
